@@ -7,14 +7,14 @@ package cmd
 
 import (
 	"fmt"
-	"autohelm/mux"
+	"autohelm/helm"
 	"strings"
 
 	"github.com/spf13/viper"
 )
 
 
-func loadConfig() *mux.ConfigData {
+func loadConfig() *helm.ConfigData {
 
 	fmt.Println("\nLoading config")
 	viper.SetConfigName("config") // name of config file (without extension)
@@ -39,7 +39,7 @@ func loadConfig() *mux.ConfigData {
 
 	all := viper.AllKeys()
 
-	confData := &mux.ConfigData{
+	confData := &helm.ConfigData{
 		Index:    make(map[string]([]string)),
 		TypeList: make(map[string]([]string)),
 		Values:   make(map[string] map[string] ([]string)),

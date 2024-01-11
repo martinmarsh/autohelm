@@ -2,51 +2,37 @@
 # Reserved channels:
 # command       used for keyboard commands
 # so these channels should not be used in inputs or outputs below
-compass:
-    name: /dev/ttyUSB0
-    type: serial
-    baud:  4800
-    outputs:
-      - to_log
-      - to_helm
-      - to_2000
-      - to_udp_client
 
-bridge:
-    name: /dev/ttyUSB1
-    type: serial
-    baud: 38400
-    input: to_2000
-    outputs:
-      - to_log
-      - to_udp_client
-
-
-ais:
-    name: /dev/ttyUSB3
-    type: serial
-    baud: 38400
-    outputs:
-      - to_2000
-      - to_udp_client
-
-log:
-    type: ships_log
-    input: to_log
-
-udp:
+udp_send:
     type:  udp_client
     input: to_udp_client
-    server_address: 192.168.1.14:8011
+    server_address: 192.168.1.166:8005
 
-udp2:
-    type:  udp_client
-    input: to_udp2_client
-    server_address: 192.168.1.167:8005
+udp_compass_listen:
+    type:  udp_listen
+    outputs:
+        - to_udp_client
+        - steer
+    port: 8006
+
+udp_helm_listen:
+    type:  udp_listen
+    outputs:
+        - to_udp_client
+        - steer
+    port: 8007
 
 keys:
     type: keyboard
     outputs: 
-        - to_helm
+        - to_udp_client
+        - steer
 
+helm:
+    type: auto-helm
+    p_factor: 100
+    i_factor: 100
+    d_factor: 100
+    gain_factor: 100
+    input: to_helm
 

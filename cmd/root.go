@@ -7,7 +7,7 @@ package cmd
 
 import (
 	"fmt"
-	"autohelm/mux"
+	"autohelm/helm"
 	"autohelm/version"
 	"os"
 
@@ -16,14 +16,18 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "navmux",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "autohelm",
+	Short: "Boat Helm driver controller",
+	Long: `Boat Helm driver controller runs under TMUX so that as a background task it can
+process inputs from a keypad to set desired course, control parameters etc.  
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Listening on UDP ports the controller gets streams of data defining the compass heading and helm
+position.
+
+The controller writes to RPI hardware ports to control the power and direction of the
+ helm motor using a motor contoller board and also to a buzzer via a buffer chip.
+
+.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -55,27 +59,28 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of navmux",
-	Long:  `Version Number of NavData Boat General and Navigation data processing`,
+	Short: "Print the version number of Autohelm",
+	Long:  `Version Number of Autohelm - part of boat helm control system and stearing to compass heading`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("NavMux - Multiplexing data sources and data recording\nVersion: " + version.BuildVersion + "\nBuild: " + version.BuildTime)
+		fmt.Println("Autohelm - Multiplexing data sources and data recording\nVersion: " + version.BuildVersion + "\nBuild: " + version.BuildTime)
 	},
 }
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Navmux starts processing",
-	Long:  `Start Navmux Multiplexing data sources and recording of Boat data - runs until aborted`,
+	Short: "Autohelm starts processing",
+	Long:  `Start Autohelm controlling helm motor and listening to keyboard,
+	 UDP compass and UDP helm position data streams - runs until aborted`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// to move up to start of oneline up use \033[F
 
 		if len(args) > 0 {
-			fmt.Printf("\nStarting Navmux using %s\n\nruns until aborted\n", args[0])
+			fmt.Printf("\nStarting Autohelm using %s\n\nruns until aborted\n", args[0])
 		} else {
-			fmt.Println("\nStarting Navmux\nruns until aborted")
+			fmt.Println("\nStarting Autohelm\nruns until aborted")
 		}
 
-		mux.Execute(loadConfig())
+		helm.Execute(loadConfig())
 
 	},
 }
