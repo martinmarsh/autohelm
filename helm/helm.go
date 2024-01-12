@@ -67,17 +67,23 @@ func helm_controller(name string,  input string, channels *map[string](chan stri
 	//ml := max_loops_slow
 	
 	
-	Motor.Port(8)
+	Motor.Port(20)
 	time.Sleep(time.Second)
-	Motor.Port(4)
+	Motor.Port(50)
 	time.Sleep(time.Second)
-	Motor.Port(0)
+	Motor.Port(80)
 	time.Sleep(time.Second)
-	Motor.Starboard(1)
+	Motor.Port(100)
 	time.Sleep(time.Second)
-	Motor.Starboard(4)
-	time.Sleep(4*time.Second)
-	Motor.Port(1)
+	Motor.Starboard(20)
+	time.Sleep(2*time.Second)
+	Motor.Starboard(50)
+	time.Sleep(2*time.Second)
+	Motor.Starboard(79)
+	time.Sleep(2*time.Second)
+	Motor.Starboard(100)
+	time.Sleep(2*time.Second)
+	Motor.Port(80)
 
 	
 

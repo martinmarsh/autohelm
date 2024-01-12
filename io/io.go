@@ -17,11 +17,19 @@ import (
 	//"periph.io/x/conn/v3/physic"
 )
 
+// Note the PWM for chip is 20khz which implies 50% pulse of 25 miro secs
+// the PWM_MIN_CYCLE prevents higher rates
+// power is given as 0 to 100 
+
 const (
 	BEEP_OUT_PIN = 25 // Pin connected to Beeper output
 	RIGHT_MOTOR_PIN = 23 // Pin to motor controller right turn direction (green led)
 	LEFT_MOTOR_PIN = 24 // Pin to motor controller left turn direction (red led - port)
-	PWM_MOTOR_PIN = 18 // Pin to motor controller enable / PWM control
+	PWM_MOTOR_PIN = 18 	// Pin to motor controller enable / PWM control
+	PWM_CYCLE_LEN = 15   // Number of steps
+	PWM_FREQUENCY = 152000 // at 50% duty = 10.1 kHz - min pulse = 6.579 micro secs
+	PWM_MIN_DUTY = 3  //  means shortest on/off time is 3*6.58 = 20 miro secs
+	PWM_MAX_DUTY = PWM_CYCLE_LEN - PWM_MIN_DUTY // ie duty can be 3 to 12  ie 20 to 80%
 )
 
 var Beep_channel chan string
@@ -65,8 +73,8 @@ func (c *HelmCtrl) init(){
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()
-	c.power_pin.DutyCycle(c.power, 8)
-	c.power_pin.Freq(38000)
+	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN)
+	c.power_pin.Freq(PWM_FREQUENCY)
 	c.left_pin.Low()
 	c.right_pin.Low()
 	rpio.StartPwm()   
@@ -75,27 +83,31 @@ func (c *HelmCtrl) init(){
 func (c *HelmCtrl) Port(power uint32){
 	c.right_pin.Low()
 	c.left_pin.High() 
-	c.power = power
-	c.power_pin.DutyCycle(c.power, 8)  
+	c.On(power)  
 }
 
 func (c *HelmCtrl) Starboard(power uint32){
 	c.left_pin.Low()
 	c.right_pin.High()
-	c.power = power
-	c.power_pin.DutyCycle(c.power, 8)  
+	c.On(power)  
 }
 
 
-
 func (c *HelmCtrl) On(power uint32){
-	c.power = power
-	c.power_pin.DutyCycle(c.power, 8) 
+	var p uint32 = (power * PWM_CYCLE_LEN)/100
+	if p < PWM_MIN_DUTY {
+		p = 0
+	}
+	if  p > PWM_MAX_DUTY {
+		p = PWM_CYCLE_LEN
+	}
+	c.power = p
+	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN) 
 } 
 
 func (c *HelmCtrl) Off(){
 	c.power = 0
-	c.power_pin.DutyCycle(c.power, 8) 
+	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN) 
 }
 
 
