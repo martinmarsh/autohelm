@@ -8,8 +8,8 @@ package helm
 import (
 	"fmt"
 	"autohelm/io"
-	"os"
 	"time"
+	"os"
 	"os/exec"
 
 	"github.com/stianeikeland/go-rpio/v4"
@@ -20,6 +20,8 @@ type ConfigData struct {
 	TypeList map[string]([]string)
 	Values   map[string]map[string]([]string)
 }
+
+var Motor *io.HelmCtrl
 
 func Execute(config *ConfigData) {
 	// wait for everything to connect on boot up
@@ -55,11 +57,7 @@ func Execute(config *ConfigData) {
 	}
 	defer rpio.Close()
 
-	 if err := io.Init(&channels); err != nil {
-		fmt.Println("Failed to set up gpio")
-		panic("error GPIO")
-	}
-
+	Motor = io.Init()
 
 	for processType, names := range config.TypeList {
 		fmt.Println(processType, names)
@@ -71,9 +69,10 @@ func Execute(config *ConfigData) {
 				udpListenerProcess(name, config.Values[name], &channels)
 			case "keyboard":
 				keyBoardProcess(name, config.Values[name], &channels)
-			case "auto-helm":
-				autoHelmProcess(name, config.Values[name], &channels)
-					
+			case "helm":
+				helmProcess(name, config.Values[name], &channels)
+			case "course":
+				courseProcess(name, config.Values[name], &channels)	
 			}
 		}
 	}

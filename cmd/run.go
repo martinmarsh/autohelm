@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"autohelm/helm"
 	"strings"
+	"strconv"
 
 	"github.com/spf13/viper"
 )
@@ -76,4 +77,12 @@ func loadConfig() *helm.ConfigData {
 	fmt.Println("config loaded")
 	return confData
 
+}
+
+func cmd_value(str string) (float64, error) {
+	if p, e := strconv.ParseFloat(str[1:], 64); e == nil {
+		return p, nil
+	} else {
+		return 0, nil
+	}
 }

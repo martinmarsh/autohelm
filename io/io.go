@@ -6,8 +6,7 @@ Copyright © 2022 Martin Marsh martin@marshtrio.com
 package io
 
 import (
-	"fmt"
-	"math"
+	// "math"
 	"strconv"
 	"time"
 
@@ -18,54 +17,90 @@ import (
 	//"periph.io/x/conn/v3/physic"
 )
 
-type helm_control struct {
-    control byte
-    power  float64
-}
+const (
+	BEEP_OUT_PIN = 25 // Pin connected to Beeper output
+	RIGHT_MOTOR_PIN = 23 // Pin to motor controller right turn direction (green led)
+	LEFT_MOTOR_PIN = 24 // Pin to motor controller left turn direction (red led - port)
+	PWM_MOTOR_PIN = 18 // Pin to motor controller enable / PWM control
+)
 
 var Beep_channel chan string
-var Motor_channel chan helm_control
+var beep_pin = rpio.Pin(BEEP_OUT_PIN)
 
-var beep_pin = rpio.Pin(25)
-var left_pin = rpio.Pin(24)
-var right_pin = rpio.Pin(23)
-var power_pin = rpio.Pin(18)
-
-
-func Init(channels *map[string](chan string)) error {
-	Beep_channel = make(chan string, 4)
-	Motor_channel = make(chan helm_control, 3)
-
-	go beeperTask()
-	go helmTask(channels)
-
-	//fmt.Println("Loading periph.io drivers")
-	// Load periph.io drivers:
-	//if _, err := host.Init(); err != nil {
-	//	return err
-	//}
-	//if err := rpio.Open(); err != nil {
-	//	fmt.Println(err)
-	//	os.Exit(1)
-	//}
-	//defer rpio.Close()
-
-	beep_pin.Output()
-	left_pin.Output()
-	right_pin.Output()
-	power_pin.Output()
-
-	left_pin.Low()
-	right_pin.Low()
-	power_pin.Low()   
-
-	return nil
+type HelmCtrl struct {
+	left_pin rpio.Pin
+	right_pin rpio.Pin
+	power_pin rpio.Pin
+    power uint32
 }
 
 func Beep(style string){
 	Beep_channel <- style
 }
 
+func Init() *HelmCtrl{
+
+	Beep_channel = make(chan string, 4)
+
+	helm_io := HelmCtrl{
+		left_pin: rpio.Pin(LEFT_MOTOR_PIN),
+		right_pin: rpio.Pin(RIGHT_MOTOR_PIN),
+		power_pin: rpio.Pin(PWM_MOTOR_PIN),
+		power: 0,
+	}
+	
+	helm_io.init()
+
+	beep_pin.Output()
+	go beeperTask()
+	
+	return &helm_io
+}
+
+func (c *HelmCtrl) init(){
+	c.left_pin = rpio.Pin(24)
+	c.right_pin = rpio.Pin(23)
+	c.power_pin = rpio.Pin(18)
+	c.power = 0
+	c.left_pin.Output()
+	c.right_pin.Output()
+	c.power_pin.Pwm()
+	c.power_pin.DutyCycle(c.power, 8)
+	c.power_pin.Freq(38000)
+	c.left_pin.Low()
+	c.right_pin.Low()
+	rpio.StartPwm()   
+}
+
+func (c *HelmCtrl) Port(power uint32){
+	c.right_pin.Low()
+	c.left_pin.High() 
+	c.power = power
+	c.power_pin.DutyCycle(c.power, 8)  
+}
+
+func (c *HelmCtrl) Starboard(power uint32){
+	c.left_pin.Low()
+	c.right_pin.High()
+	c.power = power
+	c.power_pin.DutyCycle(c.power, 8)  
+}
+
+
+
+func (c *HelmCtrl) On(power uint32){
+	c.power = power
+	c.power_pin.DutyCycle(c.power, 8) 
+} 
+
+func (c *HelmCtrl) Off(){
+	c.power = 0
+	c.power_pin.DutyCycle(c.power, 8) 
+}
+
+
+
+/*
 func Helm(control byte, power float64){
 	// control = 1 if power is a signed value
 	// control = 0 to turn off motor
@@ -98,7 +133,7 @@ func helmTask(channels *map[string](chan string)){
 		
 	for {	
 		//ask helm to compute another value
-		(*channels)["to_helm"] <-"compute"
+		// (*channels)["to_helm"] <-"compute"
 
 		select {
 		case motor := <- Motor_channel:
@@ -164,6 +199,7 @@ func helmTask(channels *map[string](chan string)){
 
 	}
 }
+*/
 
 func beeperTask(){
 	for{

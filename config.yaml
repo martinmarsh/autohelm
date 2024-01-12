@@ -12,27 +12,34 @@ udp_compass_listen:
     type:  udp_listen
     outputs:
         - to_udp_client
-        - steer
+        - to_course
     port: 8006
 
 udp_helm_listen:
     type:  udp_listen
     outputs:
         - to_udp_client
-        - steer
+        - to_helm
     port: 8007
 
 keys:
     type: keyboard
     outputs: 
         - to_udp_client
-        - steer
+        - to_helm
 
 helm:
-    type: auto-helm
+    type: helm
     p_factor: 100
     i_factor: 100
     d_factor: 100
     gain_factor: 100
     input: to_helm
 
+course:
+    type: helm
+    p_factor: 100
+    i_factor: 100
+    d_factor: 100
+    gain_factor: 100
+    input: to_course
