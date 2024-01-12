@@ -9,6 +9,7 @@ import (
 	// "math"
 	"strconv"
 	"time"
+	"math"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	//"periph.io/x/periph/conn/gpio"
@@ -40,6 +41,10 @@ type HelmCtrl struct {
 	right_pin rpio.Pin
 	power_pin rpio.Pin
     power uint32
+	Set_rudder float64
+	Rudder float64
+	Set_heading uint16
+	Heading uint16
 }
 
 func Beep(style string){
@@ -70,6 +75,10 @@ func (c *HelmCtrl) init(){
 	c.right_pin = rpio.Pin(23)
 	c.power_pin = rpio.Pin(18)
 	c.power = 0
+	c.Set_rudder = 0
+	c.Set_heading =0 
+	c.Rudder = 0
+	c.Heading = 0
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()
@@ -90,6 +99,14 @@ func (c *HelmCtrl) Starboard(power uint32){
 	c.left_pin.Low()
 	c.right_pin.High()
 	c.On(power)  
+}
+
+func (c *HelmCtrl) Helm(power float64){
+	if power < 0 {
+		c.Port(uint32(math.Abs(power)))
+	} else {
+		c.Starboard(uint32(power))
+	}
 }
 
 
