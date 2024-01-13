@@ -6,11 +6,12 @@ Copyright © 2022 Martin Marsh martin@marshtrio.com
 package helm
 
 import (
-	"fmt"
 	"autohelm/io"
-	"time"
+	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
+	"time"
 
 	"github.com/stianeikeland/go-rpio/v4"
 )
@@ -27,10 +28,10 @@ func Execute(config *ConfigData) {
 	// wait for everything to connect on boot up
 	controller_name := ""
 	time.Sleep(5 * time.Second)
-	
+
 	channels := make(map[string](chan string))
 	fmt.Println("Autohelm execute")
-	
+
 	for name, param := range config.Index {
 		for _, value := range param {
 			if value == "outputs" {
@@ -74,12 +75,11 @@ func Execute(config *ConfigData) {
 			case "helm":
 				helmProcess(name, config.Values[name], &channels)
 			case "course":
-				courseProcess(name, config.Values[name], &channels)	
+				courseProcess(name, config.Values[name], &channels)
 			}
 		}
 	}
 
-	
 	io.Beep("1s")
 
 	//Now run controller process
@@ -93,14 +93,10 @@ func Execute(config *ConfigData) {
 		case "*":
 			process_commands(str[1:])
 		case "+":
-			{
+			adjust_heading(str, +1)
 
-			}
-			
 		case "-":
-			{
-
-			}
+			adjust_heading(str, -1)
 		case "/":
 			{
 
@@ -108,46 +104,69 @@ func Execute(config *ConfigData) {
 		}
 	}
 }
-	
-	
 
-func process_commands(str string){
+func adjust_heading(str string, dir float64){
+	end_byte := len(str)
+	p, e := strconv.ParseFloat(str[1:end_byte-1], 64)
+	if str[end_byte-1] == '\n' && e == nil {
+		p = p * dir
+		Motor.Set_heading = compass_direction(Motor.Set_heading + p)
+		fmt.Printf("adjust by %.1f New Heading: %.1f", p, Motor.Set_heading)
+	} else {
+		fmt.Printf("Bad value for compass setting: %s value: '%s'", e, str)
+	}
+
+}
+
+func compass_direction(compass float64) float64 {
+	for compass < 0 || compass >= 360.0 {
+		if compass >= 360.0 {
+			compass -= 360.0
+		} else if compass < 0 {
+			compass += 360.0
+		}
+	}
+    return compass
+}
+
+
+func process_commands(str string) {
 	fmt.Printf("Process command: %s", str)
 
-	switch str{
+	switch str {
 	case "999\n":
 		{
 			fmt.Println("Shutting Down!")
 			io.Beep("2l")
 			Exit()
 		}
-	case "1\n": {
+	case "1\n":
+		{
 			fmt.Println("Motor Disabled")
 			Motor.Enabled = false
 			io.Beep("1s")
 		}
-	case "7\n":{
+	case "7\n":
+		{
 			fmt.Println("Motor Enabled")
-	    	Motor.Enabled = true
+			Motor.Enabled = true
 			io.Beep("1s")
 		}
 	}
 }
 
-
 func Exit() {
-	out, err := exec.Command("shutdown","-h","now").Output()
+	out, err := exec.Command("shutdown", "-h", "now").Output()
 
-    // if there is an error with our execution
-    // handle it here
-    if err != nil {
-        fmt.Printf("%s", err)
-    }
-    // as the out variable defined above is of type []byte we need to convert
-    // this to a string or else we will see garbage printed out in our console
-    // this is how we convert it to a string
-    fmt.Println("Command Successfully Executed")
-    output := string(out[:])
-    fmt.Println(output)
+	// if there is an error with our execution
+	// handle it here
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	// as the out variable defined above is of type []byte we need to convert
+	// this to a string or else we will see garbage printed out in our console
+	// this is how we convert it to a string
+	fmt.Println("Command Successfully Executed")
+	output := string(out[:])
+	fmt.Println(output)
 }
-

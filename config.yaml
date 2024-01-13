@@ -1,16 +1,16 @@
 # RPI 3B version
 
-udp_compass_listen:
-    type:  udp_listen
-    outputs:
-        - to_course
-    port: 8006
-
 udp_helm_listen:
     type:  udp_listen
     outputs:
         - to_helm
     port: 8007
+
+udp_compass_listen:
+    type:  udp_listen
+    outputs:
+        - to_course
+    port: 8006
 
 keys:
     type: keyboard
@@ -30,7 +30,7 @@ helm:
     input: to_helm
 
 course:
-    type: helm
+    type: course
     p_factor: 100
     i_factor: 100
     d_factor: 100

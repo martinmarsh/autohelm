@@ -28,7 +28,7 @@ func checksum(s string) string {
 
 func courseProcess(name string, config map[string][]string, channels *map[string](chan string)) {
 	
-	pid := pid.MakePid(1, 0.1, 0.3, .1, 1000)
+	pid := pid.MakePid(1, 0.1, 0.3, .001, 1000)
 
 	pid.Scale_gain = 100
 	pid.Scale_kd = 100
@@ -74,6 +74,7 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 	for {
 		str := <-(*channels)[input]
 		var err error
+		err = nil
 		fmt.Printf("Received course command %s\n", str)
 		if len(str)> 9 && str[0:6] == "$HCHDM"{
 			end_byte := len(str)
@@ -94,10 +95,13 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 				if Motor.Enabled {
 					sp_pv := relative_direction(Motor.Set_heading - Motor.Heading)
 					Motor.Set_rudder = pid.Compute(sp_pv, sp_pv)
-					fmt.Printf("heading= %f sp-pv: %f Rudder required: %f\n", Motor.Heading, sp_pv, Motor.Set_rudder)
+					fmt.Printf("heading= %.1f set-heading: %.1f sp-pv: %.1f Rudder required: %.0f\n", Motor.Heading, Motor.Set_heading, sp_pv, Motor.Set_rudder)
 				} else {
 					Motor.Set_heading = Motor.Heading
+					fmt.Printf("heading: %.1f set-heading: %.1f set-rudder: %.0f\n", Motor.Heading, Motor.Set_heading, Motor.Set_rudder)
 				}
+			} else {
+				fmt.Printf("Compass NMEA 0183 error: %s\n", err)
 			}
 		}
 				
