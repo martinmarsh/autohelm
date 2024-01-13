@@ -43,8 +43,9 @@ type HelmCtrl struct {
     power uint32
 	Set_rudder float64
 	Rudder float64
-	Set_heading uint16
-	Heading uint16
+	Set_heading float64
+	Heading float64
+	Enabled bool
 }
 
 func Beep(style string){
@@ -79,6 +80,7 @@ func (c *HelmCtrl) init(){
 	c.Set_heading =0 
 	c.Rudder = 0
 	c.Heading = 0
+	c.Enabled = false
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()
@@ -123,112 +125,12 @@ func (c *HelmCtrl) On(power uint32){
 } 
 
 func (c *HelmCtrl) Off(){
-	c.power = 0
-	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN) 
-}
-
-
-
-/*
-func Helm(control byte, power float64){
-	// control = 1 if power is a signed value
-	// control = 0 to turn off motor
-	// control = 'L' or 'R' if power is unsigned
-	if control == 1 {
-		control = 'R'
-		if power < 0 {
-			control = 'L'
-			power = math.Abs(power)
-		}
-
-	}
-	message :=  helm_control{
-		control: control,
-		power: power,   	// <=1 1 = 100%
-	}
-	fmt.Println(message)
-	Motor_channel <- message
-}
-
-func helmTask(channels *map[string](chan string)){
-	const max_power = 3000    // 3ms cycle time  300us min
-	const max_loops = 85	 // 85 x 3  255 ms read channel period
-	const max_power_slow = 20000    // 20ms cycle time  3ms min
-	const max_loops_slow = 14	 // 14 x 20  280 ms read channel period
-	t1 := time.Duration(0)
-	t2 := time.Duration(max_power_slow) * time.Microsecond
-	mp := max_power_slow
-	ml := max_loops_slow
-		
-	for {	
-		//ask helm to compute another value
-		// (*channels)["to_helm"] <-"compute"
-
-		select {
-		case motor := <- Motor_channel:
-			fmt.Println("motor control")
-			switch motor.control {
-			case 'L':
-				right_pin.Low()
-				left_pin.High()
-				//rpi.P1_16.Out(gpio.Low)
-				//rpi.P1_18.Out(gpio.High)
-			case 'R':
-				left_pin.Low()
-				right_pin.High()
-				//rpi.P1_18.Out(gpio.Low)
-				//rpi.P1_16.Out(gpio.High)
-			case 1:
-			default:
-				left_pin.Low()
-				right_pin.Low()
-				//rpi.P1_18.Out(gpio.Low)
-				//rpi.P1_16.Out(gpio.Low)
-			}
-			p1 := 0
-			mp = max_power_slow
-			ml = max_loops_slow
-
-			if motor.power > 0.2 && motor.power < 0.8 {	
-				mp = max_power
-				ml = max_loops
-			}
-		    if motor.power > 0.95 {
-				p1 = mp
-			} else if motor.power < 0.02{
-				p1 = 0
-			} else {
-				p1 = int(float64(mp) * motor.power)
-			}
-			t1 = time.Duration(p1) * time.Microsecond
-			t2 = time.Duration(mp - p1) * time.Microsecond
-			//fmt.Printf("%d %d\n", t1, t2)	
-		default:
-			// continue
-		}
-
-		if t1 == 0 {
-			power_pin.Low()
-			time.Sleep(250 * time.Millisecond)
-		} else if t2 == 0 {
-			power_pin.High()
-			time.Sleep(250 * time.Millisecond)
-		} else {
-			for i := 0; i < ml; i++ {
-				if t1 > 0 {
-					power_pin.High()
-					time.Sleep(t1)
-				}
-				if t2 > 0 {
-					power_pin.Low()
-					time.Sleep(t2)
-				}
-			}
-		}
-
+	if c.power != 0 {
+		c.power = 0
+		c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN) 
 	}
 }
-*/
+
 
 func beeperTask(){
 	for{
@@ -244,11 +146,10 @@ func beeperTask(){
 			}
 			for l := 0; l < count; l++  {
 				t := time.NewTicker(time.Duration(length) * time.Millisecond)
-				//rpi.P1_22.Out(gpio.High)
 
 				beep_pin.High() 
 				<-t.C
-				//rpi.P1_22.Out(gpio.Low)
+				
 				beep_pin.Low() 
 				<-t.C
 			}

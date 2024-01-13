@@ -51,37 +51,48 @@ func (p *Pid) Reset() {
 }
 
 // Compute the Actuating Signal from the error term
-// The error term is supplied externally and is typically the command signal (or Set Point )
-// minus the Process Variable (feed back value).  
-// This is done by the application since Sp-Pv but in some cases may need conditioning for example
-// compass substrations should be based +/- 180 after substraction. 
-// The result is the actuator value.
+// The error term is supplied externally and is typically the command signal (or Set Point ie sp)
+// minus the Process Variable (pv).  
+// This is done by the application ie sp-pv and passed to the compute methid in the sp_pv parameter.
+// The application is responsible for doing this since in some cases more than simple subtraction is
+// required ie compass errors take into account the 360 circle and results are +/- 180 after substraction. 
+// The result is the actuator signal (as).
 // To assist with scaling the paramenters scaling variables may be set. This makes it easier to use
-// user friendly values for settings
-// -pv is used instead of sp-pv as avoids spiking if set point changed
+// user friendly values for trim settings
+// An addition input to compute is the neagtive pure pv value (mpv) which is -pv eg 0-pv assuming the 
+// set point is zero.  This is used only for the differential control and is done to avoid spiking
+// when the set point is changed.
+// However mpv can be set to sp_pv if preferred and is easier to do for compass corrections where pv
+// can change from 359 to 0 for a 1 degree change in sp_pv
+//
 // The assumption is a constant calculation rate
-func (p *Pid) Compute(sp_pv, pv float64) float64 {
+func (p *Pid) Compute(sp_pv, mpv float64) float64 {
 
 	proportional := sp_pv * p.kp * p.Scale_kp
 	i_in :=  sp_pv * p.ki * p.Scale_ki
-	d_inc := -pv * p.kd * p.Scale_kd
+	d_inc := mpv * p.kd * p.Scale_kd
 
 	p.integral += i_in
 	differential := d_inc - p.last
 	p.last = d_inc
 
-	as := (p.integral + proportional + differential) * p.gain * p.Scale_gain
-
+	raw_as := (p.integral + proportional + differential) * p.gain * p.Scale_gain
+	as := raw_as
 	// Integral latch up protection
 	// Prevent further integration if max output is achieved and addition to integral is same sign
-	if math.Abs(as) > p.max_output{
-		if same_sign(i_in, as){
+	if math.Abs(raw_as) > p.max_output{
+		if same_sign(i_in, raw_as){
 			p.integral -= i_in
 		}
+		if as < 0 {
+			as = -p.max_output 
+		} else {
+			as = p.max_output 
+		}
+
 	}
 
-	fmt.Printf("integration %.2f, proportional %.3f, diff %.4f  actuation : %.4f\n", p.integral, proportional, differential, as)
-
+	fmt.Printf("i= %.2f, p= %.3f, diff= %.4f raw_as: %.4f  as: %.4f\n", p.integral, proportional, differential, raw_as, as)
 	return as	
 }
 

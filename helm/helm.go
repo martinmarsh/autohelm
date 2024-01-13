@@ -12,7 +12,7 @@ func helmProcess(name string, config map[string][]string, channels *map[string](
 	// the helm position is normalised to +- 1000
 	// an error offset 
 	
-	pid := pid.MakePid(1, 0.02, 0.01, 0.001, 95)
+	pid := pid.MakePid(1, 0.01, 0.01, 0.0001, 100)
 
 	pid.Scale_gain = 100
 	pid.Scale_kd = 100
@@ -63,10 +63,15 @@ func helm_controller(name string,  input string, channels *map[string](chan stri
 			rudder, err := strconv.ParseFloat(str[1:], 64)
 			if err == nil {
 				Motor.Rudder = rudder
-				error := Motor.Set_rudder - Motor.Rudder
-				power := pid.Compute(error, Motor.Rudder)
-				fmt.Printf("Motor power: %f \n", power)
-				Motor.Helm(power)
+				if Motor.Enabled {
+					sp_pv := Motor.Set_rudder - Motor.Rudder
+					power := pid.Compute(sp_pv, -Motor.Rudder)
+					fmt.Printf("Motor power: %f \n", power)
+					Motor.Helm(power)
+				} else {
+					Motor.Set_rudder = Motor.Rudder
+					Motor.Off()
+				}
 			} else {
 				fmt.Printf("error in rudder parsing: %s \n", err)
 			}

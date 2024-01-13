@@ -25,11 +25,11 @@ var Motor *io.HelmCtrl
 
 func Execute(config *ConfigData) {
 	// wait for everything to connect on boot up
+	controller_name := ""
 	time.Sleep(5 * time.Second)
 	
 	channels := make(map[string](chan string))
 	fmt.Println("Autohelm execute")
-	channels["command"] = make(chan string, 2)
 	
 	for name, param := range config.Index {
 		for _, value := range param {
@@ -63,6 +63,8 @@ func Execute(config *ConfigData) {
 		fmt.Println(processType, names)
 		for _, name := range names {
 			switch processType {
+			case "controller":
+				controller_name = name
 			case "udp_client":
 				udpClientProcess(name, config.Values[name], &channels)
 			case "udp_listen":
@@ -79,13 +81,55 @@ func Execute(config *ConfigData) {
 
 	
 	io.Beep("1s")
-	
+
+	//Now run controller process
+
+	input := config.Values[controller_name]["input"][0]
+	fmt.Printf("Controller in core.go wiating on channel: %s\n", input)
 	for {
-		command := <-(channels["command"])
-		fmt.Printf("Command '%s' received\n", command)
-		if command == "99" {
+		str := <-(channels)[input]
+		fmt.Printf("Got key request: %s", str)
+		switch str[0:1] {
+		case "*":
+			process_commands(str[1:])
+		case "+":
+			{
+
+			}
+			
+		case "-":
+			{
+
+			}
+		case "/":
+			{
+
+			}
+		}
+	}
+}
+	
+	
+
+func process_commands(str string){
+	fmt.Printf("Process command: %s", str)
+
+	switch str{
+	case "999\n":
+		{
+			fmt.Println("Shutting Down!")
 			io.Beep("2l")
 			Exit()
+		}
+	case "1\n": {
+			fmt.Println("Motor Disabled")
+			Motor.Enabled = false
+			io.Beep("1s")
+		}
+	case "7\n":{
+			fmt.Println("Motor Enabled")
+	    	Motor.Enabled = true
+			io.Beep("1s")
 		}
 	}
 }
@@ -105,5 +149,5 @@ func Exit() {
     fmt.Println("Command Successfully Executed")
     output := string(out[:])
     fmt.Println(output)
-
 }
+

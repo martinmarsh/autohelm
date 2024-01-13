@@ -25,12 +25,7 @@ func keyOutputs(name string, reader *bufio.Reader, outputs []string, channels *m
 			if len(message) > 1 || message[0] == '*' || 
 				message[0] == '+' || message[0] == '-' || message[0] == '/' {
 					
-				//send := strings.TrimSpace(message[1:])
-				//if send[0] == '0' {
-					// 0 as in *0 is a command other codes to output
-				//	(*channels)["command"] <- send[1:]
-				//} else {
-				fmt.Printf("Keyboard message sent: '%s'\n", message)
+				fmt.Printf("Keyboard message sent: %s\n", message)
 				for _, out := range outputs {
 					(*channels)[out] <- message
 				}
