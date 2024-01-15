@@ -13,13 +13,14 @@ import (
 
 func udpListenerProcess(name string, config map[string][]string, channels *map[string](chan string)) {
 	// listens on a port and writes to output channels
-	fmt.Println("started udp Listener " + name)
+	
 	server_port := config["port"][0]
-	fmt.Printf("UDP listener on port %s and out to channels:", server_port)
+	to_chans := ""
 	for _, out := range config["outputs"] {
-		fmt.Printf(" %s", out)
+		to_chans += fmt.Sprintf(" %s,", out)
 	}
-	fmt.Println()
+	Monitor(fmt.Sprintf("Upd_listen; name: %s  Port: %s channels: %s",name, server_port, to_chans), true, true)
+
 	if len(config["outputs"]) > 0 {
 		go udpListener(name, server_port, config["outputs"], channels)
 	}
@@ -30,7 +31,7 @@ func udpListener(name string, server_port string, outputs []string, channels *ma
 	const maxBufferSize = 1024
 	pc, err := net.ListenPacket("udp", "0.0.0.0:"+server_port)
 	if err != nil {
-		fmt.Println("udp listen error - aborted")
+		Monitor(fmt.Sprintf("Error; Upd_listen; action: ABORTED, error: %s", err.Error()), true, true)
 		return
 	}
 	defer pc.Close()
@@ -41,6 +42,8 @@ func udpListener(name string, server_port string, outputs []string, channels *ma
 		n, _, err := pc.ReadFrom(buffer)
 		if err != nil {
 			fmt.Printf("packet error")
+			Monitor(fmt.Sprintf("Error; Upd_listen; Packet Error; action: ignored, error: %s", err.Error()), true, true)
+			return
 	
 		} else {
 			for _, out := range outputs {

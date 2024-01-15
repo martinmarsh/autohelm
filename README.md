@@ -29,7 +29,8 @@ Key pad control when running (where \n is return - note: no extra charaters allo
 *7\n     - Autohelm is now active using current heading and rudder position
             *1\n pause 1s then *7\n to reset
 *7x\n    - Autohelm is now active using x value 0 to 359.9 as desired compass heading
-*0\n     - Print out Motor data        
+*0\n     - Monitor report key Motor data report  
+*.\n     - Monitor report PDI data report   
 
 +x\n  - adjust course by x degrees to starboard can be any valid decimal  350.0 +x = 10.2 if x = 20.2
 -x\n  - adjust course by x degrees to port x can be any valid decimal  10.2 -x = 350.0 if x = -20.2

@@ -19,19 +19,18 @@ func keyOutputs(name string, reader *bufio.Reader, outputs []string, channels *m
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("FATAL Error reading keys: " + name)
+			Monitor(fmt.Sprintf("Error; Keypad; FATAL Error reading keys: " + name), true, true)
 			time.Sleep(time.Minute)
 		} else {
 			if len(message) > 1 || message[0] == '*' || 
 				message[0] == '+' || message[0] == '-' || message[0] == '/' {
-					
-				fmt.Printf("Keyboard message sent: %s\n", message)
+					// Monitor(fmt.Sprintf("Keypad; Keyboard message sent: %s", message), true, true)
 				for _, out := range outputs {
 					(*channels)[out] <- message
 				}
 				
 			} else {
-				fmt.Printf("bad key command must start with * + - or / got %s\n", message)
+				Monitor(fmt.Sprintf("Error; Keypad; bad key command must start with * + - or / got %s", message), true, true)
 			}
 		}
 

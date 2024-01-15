@@ -43,7 +43,7 @@ func Execute(config *ConfigData) {
 	time.Sleep(5 * time.Second)
 	
 	channels := make(map[string](chan string))
-	fmt.Println("Autohelm execute")
+	fmt.Println("Parsing Config. in Execute function")
 
 	for name, param := range config.Index {
 		for _, value := range param {
@@ -64,6 +64,18 @@ func Execute(config *ConfigData) {
 		}
 	}
 
+	for processType, names := range config.TypeList {
+		for _, name := range names {
+			if processType == "udp_monitor" {
+				Monitor_channel = channels[config.Values[name]["input"][0]]
+				Udp_monitor_active = true
+				udpClientProcess(name, config.Values[name], &channels)
+			}
+		}
+	}
+	time.Sleep(2 * time.Second)
+	Monitor(fmt.Sprintf("Autohelm; Monitoring: %t, Openning RPIO", Udp_monitor_active), true, true)
+
 	if err := rpio.Open(); err != nil {
 		Monitor(fmt.Sprintf("Error; RPIO - could not be openned err: %s", err.Error()), true, true)
 		os.Exit(1)
@@ -72,15 +84,11 @@ func Execute(config *ConfigData) {
 	Monitor("RPIO; Openned", true, true)
 
 	Motor = io.Init()
+	Monitor("Autohelm; Motor has initialised - running up configured processes", true, true)
 
 	for processType, names := range config.TypeList {
 		for _, name := range names {
 			switch processType {
-			case "udp_monitor": {
-					Monitor_channel = channels[config.Values[name]["input"][0]]
-					Udp_monitor_active = true
-					udpClientProcess(name, config.Values[name], &channels)
-				}
 			case "controller":
 				controller_name = name
 			case "udp_client":
@@ -103,7 +111,7 @@ func Execute(config *ConfigData) {
 
 	input := config.Values[controller_name]["input"][0]
 
-	Monitor(fmt.Sprintf("Controller; in core.go waiting on channel: %s\n", input), true, true)
+	Monitor(fmt.Sprintf("Controller; in core.go waiting on channel: %s", input), true, true)
 	for {
 		str := <-(channels)[input]
 		Monitor(fmt.Sprintf("Controller; Got key request: %s", str), true, true)
@@ -201,6 +209,20 @@ func process_commands(str string) {
 				Monitor("Controller; motor: on", true, true)
 				Motor.Enabled = true
 				io.Beep("1s")
+			}
+		case "0\n":
+			{
+				rep := fmt.Sprintf("Monitor; power: %d, set_rudder: %.0f, rudder: %.0f, set_heading: %.1f, heading: %.1f, enabled: %t, in_range: %t, compass_gain: %.1f, helm_gain: %.1f", 
+					Motor.Power, Motor.Set_rudder, Motor.Rudder, Motor.Set_heading, Motor.Heading, Motor.Enabled, Motor.In_range,
+					Motor.Compass_gain, Motor.Helm_gain)
+				Monitor(rep, true, true)
+			}
+		case ".\n":
+			{
+				rep := fmt.Sprintf("Monitor; power: %d, rudder: %.0f, heading: %.1f, compass_gain: %.1f, helm_gain: %.1f, compass_ki: %.1f, compass_kd: %.1f, helm_ki: %.1f, helm_kd: %.1f", 
+				Motor.Power, Motor.Rudder, Motor.Heading, Motor.Compass_gain, Motor.Helm_gain, Motor.Compass_ki,
+				Motor.Compass_kd, Motor.Helm_ki, Motor.Helm_kd)
+				Monitor(rep, true, true)
 			}
 		}
 	}

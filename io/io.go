@@ -40,7 +40,7 @@ type HelmCtrl struct {
 	left_pin rpio.Pin
 	right_pin rpio.Pin
 	power_pin rpio.Pin
-    power uint32
+    Power uint32
 	Set_rudder float64
 	Rudder float64
 	Set_heading float64
@@ -67,7 +67,7 @@ func Init() *HelmCtrl{
 		left_pin: rpio.Pin(LEFT_MOTOR_PIN),
 		right_pin: rpio.Pin(RIGHT_MOTOR_PIN),
 		power_pin: rpio.Pin(PWM_MOTOR_PIN),
-		power: 0,
+		Power: 0,
 	}
 	
 	helm_io.init()
@@ -82,7 +82,7 @@ func (c *HelmCtrl) init(){
 	c.left_pin = rpio.Pin(24)
 	c.right_pin = rpio.Pin(23)
 	c.power_pin = rpio.Pin(18)
-	c.power = 0
+	c.Power = 0
 	c.Set_rudder = 0
 	c.Set_heading =0 
 	c.Rudder = 0
@@ -92,7 +92,7 @@ func (c *HelmCtrl) init(){
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()
-	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN)
+	c.power_pin.DutyCycle(c.Power, PWM_CYCLE_LEN)
 	c.power_pin.Freq(PWM_FREQUENCY)
 	c.left_pin.Low()
 	c.right_pin.Low()
@@ -128,14 +128,14 @@ func (c *HelmCtrl) On(power uint32){
 	if  p > PWM_MAX_DUTY {
 		p = PWM_CYCLE_LEN
 	}
-	c.power = p
-	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN) 
+	c.Power = p
+	c.power_pin.DutyCycle(c.Power, PWM_CYCLE_LEN) 
 } 
 
 func (c *HelmCtrl) Off(){
-	if c.power != 0 {
-		c.power = 0
-		c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN) 
+	if c.Power != 0 {
+		c.Power = 0
+		c.power_pin.DutyCycle(c.Power, PWM_CYCLE_LEN) 
 	}
 }
 

@@ -1,5 +1,13 @@
 # RPI 3B version
 
+# if defined the input channel configured for type udp_monitor
+# will be used for console reporting and remote logging
+# ideally define this first
+udp_monitor:
+    type: udp_monitor
+    input: to_monitor
+    server_address: 192.168.1.166:8005
+
 udp_helm_listen:
     type:  udp_listen
     outputs:
@@ -12,20 +20,10 @@ udp_compass_listen:
         - to_course
     port: 8006
 
-# if defined the input channel configured for type udp_monitor will be used for console reporting and remote logging
-udp_monitor:
-    type: udp_monitor
-    input: to_monitor
-    server_address: 192.168.1.166:8005
-
 keys:
     type: keyboard
     outputs: 
       - to_control
-
-control:
-    type: controller
-    input: to_control
 
 helm:
     type: helm
@@ -45,3 +43,7 @@ course:
     d_factor: 100
     gain_factor: 100
     input: to_course
+
+control:
+    type: controller
+    input: to_control
