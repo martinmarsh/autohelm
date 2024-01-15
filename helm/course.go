@@ -50,6 +50,8 @@ func courseProcess(name string, config map[string][]string, channels *map[string
 	}
 
 	Motor.Compass_gain = pid.Scale_gain
+	Motor.Compass_ki = pid.Scale_ki
+	Motor.Compass_kd = pid.Scale_kd
 	go course(name, input, channels, pid)
 	
 }
@@ -78,7 +80,7 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 		str := <-(*channels)[input]
 		var err error
 		err = nil
-		// fmt.Printf("Received course command %s\n", str)
+		Monitor(fmt.Sprintf("Received; course command: %s", str), false, true)
 		if len(str)> 9 && str[0:6] == "$HCHDM"{
 			end_byte := len(str)
 			if str[end_byte-3] == '*' {
@@ -95,17 +97,21 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 				parts := strings.Split(str[1:end_byte], ",")
 				heading, _ := strconv.ParseFloat(parts[1], 64)
 				pid.Scale_gain = Motor.Compass_gain
+				pid.Scale_kd = Motor.Compass_kd
+				pid.Scale_ki = Motor.Compass_ki
 				Motor.Heading = heading
 				if Motor.Enabled {
 					sp_pv := relative_direction(Motor.Set_heading - Motor.Heading)
 					Motor.Set_rudder = pid.Compute(sp_pv, sp_pv)
-					// fmt.Printf("heading= %.1f set-heading: %.1f sp-pv: %.1f Rudder required: %.0f\n", Motor.Heading, Motor.Set_heading, sp_pv, Motor.Set_rudder)
+					Monitor(fmt.Sprintf("Course; helm: on, heading: %.1f, set-heading: %.1f, sp-pv: %.1f, Rudder required: %.0f\n",
+						 Motor.Heading, Motor.Set_heading, sp_pv, Motor.Set_rudder), false, true)
 				} else {
 					Motor.Set_heading = Motor.Heading
-					// fmt.Printf("heading: %.1f set-heading: %.1f set-rudder: %.0f\n", Motor.Heading, Motor.Set_heading, Motor.Set_rudder)
+					Monitor(fmt.Sprintf("Course; helm: off, heading: %.1f, set-heading: %.1f, set-rudder: %.0f\n",
+						 Motor.Heading, Motor.Set_heading, Motor.Set_rudder), false, true)
 				}
 			} else {
-				fmt.Printf("Compass NMEA 0183 error: %s\n", err)
+				Monitor(fmt.Sprintf("Error; Compass NMEA 0183 error: %s", err), true, true)
 			}
 		}
 				

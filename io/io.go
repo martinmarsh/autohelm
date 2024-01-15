@@ -49,6 +49,10 @@ type HelmCtrl struct {
 	In_range bool
 	Compass_gain float64
 	Helm_gain float64
+	Compass_ki float64
+	Compass_kd float64
+	Helm_ki float64
+	Helm_kd float64
 }
 
 func Beep(style string){

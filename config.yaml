@@ -12,6 +12,12 @@ udp_compass_listen:
         - to_course
     port: 8006
 
+# if defined the input channel configured for type udp_monitor will be used for console reporting and remote logging
+udp_monitor:
+    type: udp_monitor
+    input: to_monitor
+    server_address: 192.168.1.166:8005
+
 keys:
     type: keyboard
     outputs: 

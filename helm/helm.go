@@ -61,6 +61,9 @@ func helmProcess(name string, config map[string][]string, channels *map[string](
 	}
 
 	Motor.Helm_gain = pid.Scale_gain
+	Motor.Helm_ki = pid.Scale_ki
+	Motor.Helm_kd = pid.Scale_kd
+
 	go helm_controller(name, input, channels, pid, &helm_calib)
 	
 }
@@ -84,9 +87,11 @@ func helmProcess(name string, config map[string][]string, channels *map[string](
 func helm_controller(name string,  input string, channels *map[string](chan string), pid *pid.Pid, helm_calib *calib) {
 	for {	
 		str := <-(*channels)[input]
-		// fmt.Printf("Received helm command %s\n", str)
+		Monitor(fmt.Sprintf("Received; helm command: %s", str), false, true)
 		if str[0:1] == "%" {
 			pid.Scale_gain = Motor.Helm_gain
+			pid.Scale_ki = Motor.Helm_ki
+			pid.Scale_kd = Motor.Helm_kd
 			rudder, err := strconv.ParseFloat(str[1:], 64)
 			if err == nil {
 				if rudder > helm_calib.max {
@@ -112,7 +117,7 @@ func helm_controller(name string,  input string, channels *map[string](chan stri
 					Motor.Off()
 				}
 			} else {
-				fmt.Printf("error in rudder parsing: %s \n", err)
+				Monitor(fmt.Sprintf("Error; error in rudder parsing: %s \n", err), true,true)
 			}
 		}
 		
