@@ -123,20 +123,20 @@ func Execute(config *ConfigData) {
 
 		case "-":
 			adjust_heading(str, -1)
-		case ".":
+		case "/":
 			adjust_ks(str[1:])
 		}
 	}
 }
 
 func adjust_ks(str string){
-	Monitor(fmt.Sprintf("Controller; adjust ks command %s", str), true, true)
+	Monitor(fmt.Sprintf("Controller; adjust pid  command %s", str), true, true)
 	end_byte := len(str)
 	if end_byte > 3 {
 		p, e := strconv.ParseFloat(str[2:end_byte-1], 64)
 
 		if str[end_byte-1] == '\n' && e == nil {
-			switch str[2:3]{
+			switch str[:2]{
 			case "0/":
 				Motor.Compass_gain = p
 				Monitor(fmt.Sprintf("Controller; compass gain: %.2f", Motor.Compass_gain), true, true)
