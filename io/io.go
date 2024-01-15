@@ -6,16 +6,12 @@ Copyright © 2022 Martin Marsh martin@marshtrio.com
 package io
 
 import (
-	// "math"
 	"strconv"
 	"time"
 	"math"
 
 	"github.com/stianeikeland/go-rpio/v4"
-	//"periph.io/x/periph/conn/gpio"
-	//"periph.io/x/periph/host"
-	//"periph.io/x/periph/host/rpi"
-	//"periph.io/x/conn/v3/physic"
+	
 )
 
 // Note the PWM for chip is 20khz which implies 50% pulse of 25 miro secs
@@ -41,6 +37,7 @@ type HelmCtrl struct {
 	right_pin rpio.Pin
 	power_pin rpio.Pin
     Power uint32
+	Duty_Power uint32
 	Set_rudder float64
 	Rudder float64
 	Set_heading float64
@@ -83,6 +80,7 @@ func (c *HelmCtrl) init(){
 	c.right_pin = rpio.Pin(23)
 	c.power_pin = rpio.Pin(18)
 	c.Power = 0
+	c.Duty_Power = 0
 	c.Set_rudder = 0
 	c.Set_heading =0 
 	c.Rudder = 0
@@ -122,20 +120,22 @@ func (c *HelmCtrl) Helm(power float64){
 
 func (c *HelmCtrl) On(power uint32){
 	var p uint32 = (power * PWM_CYCLE_LEN)/100
+	c.Power = power
 	if p < PWM_MIN_DUTY {
 		p = 0
 	}
 	if  p > PWM_MAX_DUTY {
 		p = PWM_CYCLE_LEN
 	}
-	c.Power = p
-	c.power_pin.DutyCycle(c.Power, PWM_CYCLE_LEN) 
+	c.Duty_Power = p
+	c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
 } 
 
 func (c *HelmCtrl) Off(){
 	if c.Power != 0 {
 		c.Power = 0
-		c.power_pin.DutyCycle(c.Power, PWM_CYCLE_LEN) 
+		c.Duty_Power = 0
+		c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
 	}
 }
 

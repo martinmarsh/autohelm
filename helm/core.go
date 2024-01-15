@@ -123,32 +123,44 @@ func Execute(config *ConfigData) {
 
 		case "-":
 			adjust_heading(str, -1)
-		case "/":
+		case ".":
 			adjust_ks(str[1:])
 		}
 	}
 }
 
 func adjust_ks(str string){
+	Monitor(fmt.Sprintf("Controller; adjust ks command %s", str), true, true)
 	end_byte := len(str)
 	if end_byte > 3 {
 		p, e := strconv.ParseFloat(str[2:end_byte-1], 64)
+
 		if str[end_byte-1] == '\n' && e == nil {
 			switch str[2:3]{
 			case "0/":
 				Motor.Compass_gain = p
+				Monitor(fmt.Sprintf("Controller; compass gain: %.2f", Motor.Compass_gain), true, true)
 			case "0.":
 				Motor.Compass_kd = p
+				Monitor(fmt.Sprintf("Controller; compass kd: %.2f", Motor.Compass_kd), true, true)
 			case "0*":
 				Motor.Compass_ki = p
+				Monitor(fmt.Sprintf("Controller; compass ki: %.2f", Motor.Compass_ki), true, true)
 			case "1/":
-				Motor.Helm_gain = p	
+				Motor.Helm_gain = p
+				Monitor(fmt.Sprintf("Controller; helm gain: %.2f", Motor.Helm_gain), true, true)
 			case "1*":
 				Motor.Helm_ki = p
+				Monitor(fmt.Sprintf("Controller; helm ki: %.2f", Motor.Helm_ki), true, true)
 			case "1.":
 				Motor.Helm_kd = p
+				Monitor(fmt.Sprintf("Controller; helm kd: %.2f",Motor.Helm_kd), true, true)
 			}
+		}else{
+			Monitor(fmt.Sprintf("Error; Controller; adjusting PID values error: %s", e.Error()), true, true)
 		}
+	}else {
+		Monitor(fmt.Sprintf("Error; Controller; adjusting PID wrong length command must be >3 got: %d", end_byte), true, true)
 	}	
 }
 
@@ -219,8 +231,8 @@ func process_commands(str string) {
 			}
 		case ".\n":
 			{
-				rep := fmt.Sprintf("Monitor; power: %d, rudder: %.0f, heading: %.1f, compass_gain: %.1f, helm_gain: %.1f, compass_ki: %.1f, compass_kd: %.1f, helm_ki: %.1f, helm_kd: %.1f", 
-				Motor.Power, Motor.Rudder, Motor.Heading, Motor.Compass_gain, Motor.Helm_gain, Motor.Compass_ki,
+				rep := fmt.Sprintf("Monitor; duty_power: %d, rudder: %.0f, heading: %.1f, compass_gain: %.1f, helm_gain: %.1f, compass_ki: %.1f, compass_kd: %.1f, helm_ki: %.1f, helm_kd: %.1f", 
+				Motor.Duty_Power, Motor.Rudder, Motor.Heading, Motor.Compass_gain, Motor.Helm_gain, Motor.Compass_ki,
 				Motor.Compass_kd, Motor.Helm_ki, Motor.Helm_kd)
 				Monitor(rep, true, true)
 			}
