@@ -32,6 +32,9 @@ Key pad control when running (where \n is return - note no extra charaters allow
 +x\n  - adjust course by x degrees to starboard can be any valid decimal  350.0 +x = 10.2 if x = 20.2
 -x\n  - adjust course by x degrees to port x can be any valid decimal  10.2 -x = 350.0 if x = -20.2
 
+\1*x\n - set helm gain -  normalised to 100 eg \1*100\n
+\2*x\n - set compass gain - normalised to 100 eg \2*100\n
+
 Note: to set new course use *1\n manually ensure boat is stable on new course then use *7\n to engage autohelm
 
 Helm and compass pid settings are adjustable via config file.

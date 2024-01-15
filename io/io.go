@@ -46,6 +46,9 @@ type HelmCtrl struct {
 	Set_heading float64
 	Heading float64
 	Enabled bool
+	In_range bool
+	Compass_gain float64
+	Helm_gain float64
 }
 
 func Beep(style string){
@@ -81,6 +84,7 @@ func (c *HelmCtrl) init(){
 	c.Rudder = 0
 	c.Heading = 0
 	c.Enabled = false
+	c.In_range = true
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()

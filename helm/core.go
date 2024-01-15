@@ -98,11 +98,25 @@ func Execute(config *ConfigData) {
 		case "-":
 			adjust_heading(str, -1)
 		case "/":
-			{
+			adjust_gain(str[1:])
+		}
+	}
+}
+
+func adjust_gain(str string){
+	end_byte := len(str)
+	if end_byte > 3 {
+		p, e := strconv.ParseFloat(str[2:end_byte-1], 64)
+		if str[end_byte-1] == '\n' && e == nil {
+			switch str[2:3]{
+			case "1*":
+				Motor.Helm_gain = p
+			case "2*":
+				Motor.Compass_gain = p
 
 			}
 		}
-	}
+	}	
 }
 
 func adjust_heading(str string, dir float64){
@@ -144,6 +158,7 @@ func process_commands(str string) {
 		{
 			fmt.Println("Motor Disabled")
 			Motor.Enabled = false
+
 			io.Beep("1s")
 		}
 	case "7\n":

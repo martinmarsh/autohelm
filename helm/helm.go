@@ -7,12 +7,39 @@ import (
 
 )
 
+type calib struct {
+	max float64
+	min float64
+	centre float64
+	scale float64
+}
+
 
 func helmProcess(name string, config map[string][]string, channels *map[string](chan string)) {
-	// the helm position is normalised to +- 1000
+	// the helm position is normalised to +- 10000
 	// an error offset 
+	helm_calib := calib{
+		max: 1000,
+		min: -1000,
+		centre: 0,
+		scale: 0.1,
+	}
 	
-	pid := pid.MakePid(1, 0.01, 0.01, 0.0001, 100)
+	if p, e := strconv.ParseFloat(config["max_helm"][0], 32); e == nil {
+		helm_calib.max = p
+	}
+	
+	if p, e := strconv.ParseFloat(config["min_helm"][0], 32); e == nil {
+		helm_calib.min = p
+	}
+
+	if p, e := strconv.ParseFloat(config["centre_helm"][0], 32); e == nil {
+		helm_calib.centre = p
+	}
+
+	helm_calib.scale = (helm_calib.max - helm_calib.min)/20000
+	
+	pid := pid.MakePid(1, 0.01, 0.01, 0.01, 100)
 
 	pid.Scale_gain = 100
 	pid.Scale_kd = 100
@@ -33,8 +60,8 @@ func helmProcess(name string, config map[string][]string, channels *map[string](
 		pid.Scale_gain = gain_factor
 	}
 
-	
-	go helm_controller(name, input, channels, pid)
+	Motor.Helm_gain = pid.Scale_gain
+	go helm_controller(name, input, channels, pid, &helm_calib)
 	
 }
 
@@ -54,22 +81,34 @@ func helmProcess(name string, config map[string][]string, channels *map[string](
 // The PID delta d factor tends to dampen changes in power to improve dynamic smothness and overshoot
 // 
 //
-func helm_controller(name string,  input string, channels *map[string](chan string), pid *pid.Pid) {
-	
+func helm_controller(name string,  input string, channels *map[string](chan string), pid *pid.Pid, helm_calib *calib) {
 	for {	
 		str := <-(*channels)[input]
-		fmt.Printf("Received helm command %s\n", str)
+		// fmt.Printf("Received helm command %s\n", str)
 		if str[0:1] == "%" {
+			pid.Scale_gain = Motor.Helm_gain
 			rudder, err := strconv.ParseFloat(str[1:], 64)
 			if err == nil {
-				Motor.Rudder = rudder
-				if Motor.Enabled {
-					sp_pv := Motor.Set_rudder - Motor.Rudder
-					power := pid.Compute(sp_pv, -Motor.Rudder)
-					fmt.Printf("Motor power: %f \n", power)
-					Motor.Helm(power)
+				if rudder > helm_calib.max {
+					rudder = helm_calib.max
+					Motor.In_range = false
+				} else if rudder < helm_calib.min {
+					rudder = helm_calib.min
+					Motor.In_range = false
 				} else {
-					Motor.Set_rudder = Motor.Rudder
+					Motor.In_range = true
+				}
+				if Motor.In_range {
+					Motor.Rudder = rudder / helm_calib.scale - helm_calib.centre
+					if Motor.Enabled{
+						sp_pv := Motor.Set_rudder - Motor.Rudder
+						power := pid.Compute(sp_pv, -Motor.Rudder) 
+						Motor.Helm(power)
+					} else {
+						Motor.Set_rudder = Motor.Rudder
+						Motor.Off()
+					}
+				} else {
 					Motor.Off()
 				}
 			} else {
