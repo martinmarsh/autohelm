@@ -165,27 +165,16 @@ func adjust_ks(str string){
 }
 
 func adjust_heading(str string, dir float64){
-	end_byte := len(str)
-	p, e := strconv.ParseFloat(str[1:end_byte-1], 64)
-	if str[end_byte-1] == '\n' && e == nil {
+	endByte := len(str)
+	p, e := strconv.ParseFloat(str[1:endByte-1], 64)
+	if str[endByte-1] == '\n' && e == nil {
 		p = p * dir
-		Motor.Set_heading = compass_direction(Motor.Set_heading + p)
-		Monitor(fmt.Sprintf("Controller; adjusted by %.1f New Heading: %.1f", p, Motor.Set_heading), true, true)
+		newHeading := Motor.IncrDesiredHeading(p)
+		Monitor(fmt.Sprintf("Controller; adjusted by %.1f New Heading: %.1f", p, newHeading), true, true)
 	} else {
 		Monitor(fmt.Sprintf("Error; In Controller Bad value for compass setting: %s value: '%s'", e, str), true, true)
 	}
 
-}
-
-func compass_direction(compass float64) float64 {
-	for compass < 0 || compass >= 360.0 {
-		if compass >= 360.0 {
-			compass -= 360.0
-		} else if compass < 0 {
-			compass += 360.0
-		}
-	}
-    return compass
 }
 
 
@@ -195,9 +184,9 @@ func process_commands(str string) {
 	if str[0:1] == "7" && end_byte > 2{
 		p, e := strconv.ParseFloat(str[1:end_byte-1], 64)
 		if str[end_byte-1] == '\n' && e == nil && p<= 360 && p>= 0 {
-			Motor.Set_heading = compass_direction(p)
-			Monitor(fmt.Sprintf("Controller; motor: on, - set_course: %.1f\n", Motor.Set_heading), true, true)
-			Motor.Enabled.Store(true)
+			newHeading := Motor.SetDesiredHeading(p)
+			Monitor(fmt.Sprintf("Controller; motor: on, - set_course: %.1f\n",newHeading), true, true)
+			Motor.Enable(true)
 			io.Beep("1s")
 		}
 
@@ -213,28 +202,22 @@ func process_commands(str string) {
 		case "1\n":
 			{
 				Monitor("Controller; motor: off", true, true)
-				Motor.Enabled.Store(false)
+				Motor.Enable(false)
 				io.Beep("1s")
 			}
 		case "7\n":
 			{
 				Monitor("Controller; motor: on", true, true)
-				Motor.Enabled.Store(true)
+				Motor.Enable(true)
 				io.Beep("1s")
 			}
 		case "0\n":
 			{
-				rep := fmt.Sprintf("Monitor; power: %d, set_rudder: %.0f, rudder: %.0f, set_heading: %.1f, heading: %.1f, Enabled: %t, OverRange: %t, compass_gain: %.1f, helm_gain: %.1f", 
-					Motor.Power, Motor.Set_rudder, Motor.Rudder, Motor.Set_heading, Motor.Heading, Motor.Enabled.Load(), Motor.OverRange.Load(),
-					Motor.Compass_gain, Motor.Helm_gain)
-				Monitor(rep, true, true)
+				Monitor(Motor.GetMonitorString(1), true, true)
 			}
 		case ".\n":
 			{
-				rep := fmt.Sprintf("Monitor; duty_power: %d, rudder: %.0f, heading: %.1f, compass_gain: %.1f, helm_gain: %.1f, compass_ki: %.1f, compass_kd: %.1f, helm_ki: %.1f, helm_kd: %.1f", 
-				Motor.Duty_Power, Motor.Rudder, Motor.Heading, Motor.Compass_gain, Motor.Helm_gain, Motor.Compass_ki,
-				Motor.Compass_kd, Motor.Helm_ki, Motor.Helm_kd)
-				Monitor(rep, true, true)
+				Monitor(Motor.GetMonitorString(2), true, true)
 			}
 		}
 	}

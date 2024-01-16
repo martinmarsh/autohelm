@@ -94,26 +94,16 @@ func helm_controller(name string,  input string, channels *map[string](chan stri
 			pid.Scale_kd = Motor.Helm_kd
 			rudder, err := strconv.ParseFloat(str[1:], 64)
 			if err == nil {
-				if rudder > helm_calib.max {
-					rudder = helm_calib.max
-					Motor.OverRange.Store(true)
-				} else if rudder < helm_calib.min {
-					rudder = helm_calib.min
-					Motor.OverRange.Store(true)
-				} else {
-					Motor.OverRange.Store(false)
-				}
-				if Motor.OverRange.Load() {
-					Motor.Set_rudder = Motor.Rudder
-					Motor.Off()
-				} else {
-					Motor.Rudder = rudder / helm_calib.scale - helm_calib.centre
-					if Motor.Enabled.Load(){
-						sp_pv := Motor.Set_rudder - Motor.Rudder
-						power := pid.Compute(sp_pv, -Motor.Rudder) 
+				if Motor.RudderInRange(rudder, helm_calib.max, helm_calib.min){
+					actual := rudder / helm_calib.scale - helm_calib.centre
+					Motor.SetActualRudder(actual)
+					if Motor.IsEnabled(){
+						sp_pv := Motor.GetDesiredRudder() - actual
+						power := pid.Compute(sp_pv, -actual) 
 						Motor.Helm(power)
 					}
 				}
+
 			} else {
 				Monitor(fmt.Sprintf("Error; error in rudder parsing: %s \n", err), true,true)
 			}
@@ -122,3 +112,4 @@ func helm_controller(name string,  input string, channels *map[string](chan stri
 	}
 		
 }
+

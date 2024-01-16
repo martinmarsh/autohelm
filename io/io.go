@@ -10,7 +10,7 @@ import (
 	"time"
 	"math"
 	"sync"
-	"sync/atomic"
+	"fmt"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	
@@ -39,14 +39,14 @@ type HelmCtrl struct {
 	left_pin rpio.Pin
 	right_pin rpio.Pin
 	power_pin rpio.Pin
-    Power uint32
-	Duty_Power uint32
-	Set_rudder float64
-	Rudder float64
-	Set_heading float64
-	Heading float64
-	Enabled atomic.Bool
-	OverRange atomic.Bool
+    power uint32
+	dutyPower uint32
+	setRudder float64
+	rudder float64
+	setHeading float64
+	heading float64
+	enabled bool
+	overRange bool
 	Compass_gain float64
 	Helm_gain float64
 	Compass_ki float64
@@ -67,7 +67,7 @@ func Init() *HelmCtrl{
 		left_pin: rpio.Pin(LEFT_MOTOR_PIN),
 		right_pin: rpio.Pin(RIGHT_MOTOR_PIN),
 		power_pin: rpio.Pin(PWM_MOTOR_PIN),
-		Power: 0,
+		power: 0,
 	}
 	
 	helm_io.init()
@@ -82,23 +82,108 @@ func (c *HelmCtrl) init(){
 	c.left_pin = rpio.Pin(24)
 	c.right_pin = rpio.Pin(23)
 	c.power_pin = rpio.Pin(18)
-	c.Power = 0
-	c.Duty_Power = 0
-	c.Set_rudder = 0
-	c.Set_heading =0 
-	c.Rudder = 0
-	c.Heading = 0
-	c.Enabled.Store(false)
-	c.OverRange.Store(false)
+	c.power = 0
+	c.dutyPower = 0
+	c.setRudder = 0
+	c.setHeading =0 
+	c.rudder = 0
+	c.heading = 0
+	c.enabled = false
+	c.overRange = false
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()
-	c.power_pin.DutyCycle(c.Power, PWM_CYCLE_LEN)
+	c.power_pin.DutyCycle(c.power, PWM_CYCLE_LEN)
 	c.power_pin.Freq(PWM_FREQUENCY)
 	c.left_pin.Low()
 	c.right_pin.Low()
 	rpio.StartPwm()   
 }
+
+func (c *HelmCtrl) Enable(set bool){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.enabled = set
+}
+
+func (c *HelmCtrl) IsEnabled() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.enabled
+}
+
+
+func (c *HelmCtrl) SetActualRudder(rudder float64){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.rudder = rudder
+}
+
+
+func (c *HelmCtrl) RudderInRange(rawRudder float64, rawMax float64, rawMin float64) bool {
+	ret := false
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if rawRudder > rawMax {
+		c.overRange = true
+		c.offPreLocked()
+	} else if rawRudder < rawMin {
+		c.overRange = true
+		c.offPreLocked()
+	} else {
+		c.overRange = false
+		ret = true	
+	}
+	
+	return ret
+}
+ 
+func (c *HelmCtrl) IncrDesiredHeading(inrc float64) float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.setHeading = compass_direction(c.setHeading + inrc)
+	return c.setHeading
+}
+
+func (c *HelmCtrl) SetDesiredHeading(heading float64) float64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.setHeading = compass_direction(heading)
+	return c.setHeading
+}
+
+func (c *HelmCtrl) ProcessHeading(heading float64) (float64, bool){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var diff float64
+	c.heading = heading
+	if c.enabled {
+		diff = c.setHeading - c.heading
+		// Monitor(fmt.Sprintf("Course; helm: on, heading: %.1f, set-heading: %.1f, sp-pv: %.1f, Rudder required: %.0f\n",
+		//	 Motor.Heading, Motor.Set_heading, sp_pv, Motor.Set_rudder), false, true)
+	} else {
+		c.setRudder = c.heading
+		//Monitor(fmt.Sprintf("Course; helm: off, heading: %.1f, set-heading: %.1f, set-rudder: %.0f\n",
+		//	 Motor.Heading, Motor.Set_heading, Motor.Set_rudder), false, true)
+	}
+
+	return diff, c.enabled
+}
+
+func (c *HelmCtrl) GetDesiredRudder() float64{
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.setRudder
+}
+
+func (c *HelmCtrl) SetDesiredRudder(rudder float64){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.setRudder = rudder
+}
+
+
+
 
 func (c *HelmCtrl) Helm(power float64){
 	if power < 0 {
@@ -119,10 +204,15 @@ func (c *HelmCtrl) On(power uint32){
 func (c *HelmCtrl) Off(){
 	c.mu.Lock()
     defer c.mu.Unlock()
-	if c.Power != 0 {
-		c.Power = 0
-		c.Duty_Power = 0
-		c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
+	c.offPreLocked()
+
+}
+
+func (c *HelmCtrl) offPreLocked(){
+	if c.power != 0 {
+		c.power = 0
+		c.dutyPower = 0
+		c.power_pin.DutyCycle(c.dutyPower, PWM_CYCLE_LEN) 
 	}
 }
 
@@ -142,17 +232,33 @@ func (c *HelmCtrl) Starboard(power uint32){
 	c.onPreLocked(power)  
 }
 
+func (c *HelmCtrl) GetMonitorString(strType uint32) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var rep string
+	if strType == 1 {
+		rep = fmt.Sprintf("Monitor; power: %d, set_rudder: %.0f, rudder: %.0f, set_heading: %.1f, heading: %.1f, Enabled: %t, OverRange: %t, compass_gain: %.1f, helm_gain: %.1f", 
+					c.power, c.setRudder, c.rudder, c.setHeading, c.heading, c.enabled, c.overRange,
+					c.Compass_gain, c.Helm_gain)
+	} else {
+		rep = fmt.Sprintf("Monitor; duty_power: %d, rudder: %.0f, heading: %.1f, compass_gain: %.1f, helm_gain: %.1f, compass_ki: %.1f, compass_kd: %.1f, helm_ki: %.1f, helm_kd: %.1f", 
+		c.dutyPower, c.rudder, c.heading, c.Compass_gain, c.Helm_gain, c.Compass_ki,
+		c.Compass_kd, c.Helm_ki, c.Helm_kd)
+	}
+	return rep
+}
+
 func (c *HelmCtrl) onPreLocked(power uint32){
 	var p uint32 = (power * PWM_CYCLE_LEN)/100
-	c.Power = power
+	c.power = power
 	if p < PWM_MIN_DUTY {
 		p = 0
 	}
 	if  p > PWM_MAX_DUTY {
 		p = PWM_CYCLE_LEN
 	}
-	c.Duty_Power = p
-	c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
+	c.dutyPower = p
+	c.power_pin.DutyCycle(c.dutyPower, PWM_CYCLE_LEN) 
 } 
 
 func beeperTask(){
@@ -178,5 +284,17 @@ func beeperTask(){
 			}
 		}
 	}
-
 }
+
+
+func compass_direction(compass float64) float64 {
+		for compass < 0 || compass >= 360.0 {
+			if compass >= 360.0 {
+				compass -= 360.0
+			} else if compass < 0 {
+				compass += 360.0
+			}
+		}
+		return compass
+	}
+	

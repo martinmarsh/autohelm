@@ -99,17 +99,12 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 				pid.Scale_gain = Motor.Compass_gain
 				pid.Scale_kd = Motor.Compass_kd
 				pid.Scale_ki = Motor.Compass_ki
-				Motor.Heading = heading
-				if Motor.Enabled.Load() {
-					sp_pv := relative_direction(Motor.Set_heading - Motor.Heading)
-					Motor.Set_rudder = pid.Compute(sp_pv, sp_pv)
-					Monitor(fmt.Sprintf("Course; helm: on, heading: %.1f, set-heading: %.1f, sp-pv: %.1f, Rudder required: %.0f\n",
-						 Motor.Heading, Motor.Set_heading, sp_pv, Motor.Set_rudder), false, true)
-				} else {
-					Motor.Set_heading = Motor.Heading
-					Monitor(fmt.Sprintf("Course; helm: off, heading: %.1f, set-heading: %.1f, set-rudder: %.0f\n",
-						 Motor.Heading, Motor.Set_heading, Motor.Set_rudder), false, true)
+				heading_error, enabled := Motor.ProcessHeading(heading)
+				if enabled {
+					sp_pv := relative_direction(heading_error)
+					Motor.SetDesiredRudder(pid.Compute(sp_pv, sp_pv))
 				}
+
 			} else {
 				Monitor(fmt.Sprintf("Error; Compass NMEA 0183 error: %s", err), true, true)
 			}
