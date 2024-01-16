@@ -100,7 +100,7 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 				pid.Scale_kd = Motor.Compass_kd
 				pid.Scale_ki = Motor.Compass_ki
 				Motor.Heading = heading
-				if Motor.Enabled {
+				if Motor.Enabled.Load() {
 					sp_pv := relative_direction(Motor.Set_heading - Motor.Heading)
 					Motor.Set_rudder = pid.Compute(sp_pv, sp_pv)
 					Monitor(fmt.Sprintf("Course; helm: on, heading: %.1f, set-heading: %.1f, sp-pv: %.1f, Rudder required: %.0f\n",

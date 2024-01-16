@@ -197,7 +197,7 @@ func process_commands(str string) {
 		if str[end_byte-1] == '\n' && e == nil && p<= 360 && p>= 0 {
 			Motor.Set_heading = compass_direction(p)
 			Monitor(fmt.Sprintf("Controller; motor: on, - set_course: %.1f\n", Motor.Set_heading), true, true)
-			Motor.Enabled = true
+			Motor.Enabled.Store(true)
 			io.Beep("1s")
 		}
 
@@ -213,19 +213,19 @@ func process_commands(str string) {
 		case "1\n":
 			{
 				Monitor("Controller; motor: off", true, true)
-				Motor.Enabled = false
+				Motor.Enabled.Store(false)
 				io.Beep("1s")
 			}
 		case "7\n":
 			{
 				Monitor("Controller; motor: on", true, true)
-				Motor.Enabled = true
+				Motor.Enabled.Store(true)
 				io.Beep("1s")
 			}
 		case "0\n":
 			{
-				rep := fmt.Sprintf("Monitor; power: %d, set_rudder: %.0f, rudder: %.0f, set_heading: %.1f, heading: %.1f, enabled: %t, in_range: %t, compass_gain: %.1f, helm_gain: %.1f", 
-					Motor.Power, Motor.Set_rudder, Motor.Rudder, Motor.Set_heading, Motor.Heading, Motor.Enabled, Motor.In_range,
+				rep := fmt.Sprintf("Monitor; power: %d, set_rudder: %.0f, rudder: %.0f, set_heading: %.1f, heading: %.1f, Enabled: %t, OverRange: %t, compass_gain: %.1f, helm_gain: %.1f", 
+					Motor.Power, Motor.Set_rudder, Motor.Rudder, Motor.Set_heading, Motor.Heading, Motor.Enabled.Load(), Motor.OverRange.Load(),
 					Motor.Compass_gain, Motor.Helm_gain)
 				Monitor(rep, true, true)
 			}

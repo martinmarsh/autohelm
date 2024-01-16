@@ -39,7 +39,7 @@ func helmProcess(name string, config map[string][]string, channels *map[string](
 
 	helm_calib.scale = (helm_calib.max - helm_calib.min)/20000
 	
-	pid := pid.MakePid(1, 0.01, 0.01, 0.01, 100)
+	pid := pid.MakePid(1, 0.01, 0.01, 0.0001, 100)
 
 	pid.Scale_gain = 100
 	pid.Scale_kd = 100
@@ -96,25 +96,23 @@ func helm_controller(name string,  input string, channels *map[string](chan stri
 			if err == nil {
 				if rudder > helm_calib.max {
 					rudder = helm_calib.max
-					Motor.In_range = false
+					Motor.OverRange.Store(true)
 				} else if rudder < helm_calib.min {
 					rudder = helm_calib.min
-					Motor.In_range = false
+					Motor.OverRange.Store(true)
 				} else {
-					Motor.In_range = true
+					Motor.OverRange.Store(false)
 				}
-				if Motor.In_range {
+				if Motor.OverRange.Load() {
+					Motor.Set_rudder = Motor.Rudder
+					Motor.Off()
+				} else {
 					Motor.Rudder = rudder / helm_calib.scale - helm_calib.centre
-					if Motor.Enabled{
+					if Motor.Enabled.Load(){
 						sp_pv := Motor.Set_rudder - Motor.Rudder
 						power := pid.Compute(sp_pv, -Motor.Rudder) 
 						Motor.Helm(power)
-					} else {
-						Motor.Set_rudder = Motor.Rudder
-						Motor.Off()
 					}
-				} else {
-					Motor.Off()
 				}
 			} else {
 				Monitor(fmt.Sprintf("Error; error in rudder parsing: %s \n", err), true,true)

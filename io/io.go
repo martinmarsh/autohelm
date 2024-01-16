@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 	"math"
+	"sync"
+	"sync/atomic"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	
@@ -33,6 +35,7 @@ var Beep_channel chan string
 var beep_pin = rpio.Pin(BEEP_OUT_PIN)
 
 type HelmCtrl struct {
+	mu       sync.Mutex
 	left_pin rpio.Pin
 	right_pin rpio.Pin
 	power_pin rpio.Pin
@@ -42,8 +45,8 @@ type HelmCtrl struct {
 	Rudder float64
 	Set_heading float64
 	Heading float64
-	Enabled bool
-	In_range bool
+	Enabled atomic.Bool
+	OverRange atomic.Bool
 	Compass_gain float64
 	Helm_gain float64
 	Compass_ki float64
@@ -85,8 +88,8 @@ func (c *HelmCtrl) init(){
 	c.Set_heading =0 
 	c.Rudder = 0
 	c.Heading = 0
-	c.Enabled = false
-	c.In_range = true
+	c.Enabled.Store(false)
+	c.OverRange.Store(false)
 	c.left_pin.Output()
 	c.right_pin.Output()
 	c.power_pin.Pwm()
@@ -95,18 +98,6 @@ func (c *HelmCtrl) init(){
 	c.left_pin.Low()
 	c.right_pin.Low()
 	rpio.StartPwm()   
-}
-
-func (c *HelmCtrl) Port(power uint32){
-	c.right_pin.Low()
-	c.left_pin.High() 
-	c.On(power)  
-}
-
-func (c *HelmCtrl) Starboard(power uint32){
-	c.left_pin.Low()
-	c.right_pin.High()
-	c.On(power)  
 }
 
 func (c *HelmCtrl) Helm(power float64){
@@ -119,6 +110,39 @@ func (c *HelmCtrl) Helm(power float64){
 
 
 func (c *HelmCtrl) On(power uint32){
+	c.mu.Lock()
+    defer c.mu.Unlock()
+	c.onPreLocked(power)
+} 
+
+
+func (c *HelmCtrl) Off(){
+	c.mu.Lock()
+    defer c.mu.Unlock()
+	if c.Power != 0 {
+		c.Power = 0
+		c.Duty_Power = 0
+		c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
+	}
+}
+
+func (c *HelmCtrl) Port(power uint32){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.right_pin.Low()
+	c.left_pin.High() 
+	c.onPreLocked(power)  
+}
+
+func (c *HelmCtrl) Starboard(power uint32){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.left_pin.Low()
+	c.right_pin.High()
+	c.onPreLocked(power)  
+}
+
+func (c *HelmCtrl) onPreLocked(power uint32){
 	var p uint32 = (power * PWM_CYCLE_LEN)/100
 	c.Power = power
 	if p < PWM_MIN_DUTY {
@@ -130,15 +154,6 @@ func (c *HelmCtrl) On(power uint32){
 	c.Duty_Power = p
 	c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
 } 
-
-func (c *HelmCtrl) Off(){
-	if c.Power != 0 {
-		c.Power = 0
-		c.Duty_Power = 0
-		c.power_pin.DutyCycle(c.Duty_Power, PWM_CYCLE_LEN) 
-	}
-}
-
 
 func beeperTask(){
 	for{
