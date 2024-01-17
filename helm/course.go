@@ -48,10 +48,8 @@ func courseProcess(name string, config map[string][]string, channels *map[string
     if gain_factor, e := strconv.ParseFloat(config["gain_factor"][0], 32); e == nil{
 		pid.Scale_gain = gain_factor
 	}
+	Motor.SetCompassPid(pid)
 
-	Motor.Compass_gain = pid.Scale_gain
-	Motor.Compass_ki = pid.Scale_ki
-	Motor.Compass_kd = pid.Scale_kd
 	go course(name, input, channels, pid)
 	
 }
@@ -96,9 +94,7 @@ func course(name string,  input string, channels *map[string](chan string), pid 
 			if err == nil{
 				parts := strings.Split(str[1:end_byte], ",")
 				heading, _ := strconv.ParseFloat(parts[1], 64)
-				pid.Scale_gain = Motor.Compass_gain
-				pid.Scale_kd = Motor.Compass_kd
-				pid.Scale_ki = Motor.Compass_ki
+				Motor.SetPidCompass(pid)
 				heading_error, enabled := Motor.ProcessHeading(heading)
 				if enabled {
 					sp_pv := relative_direction(heading_error)

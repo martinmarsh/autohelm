@@ -11,6 +11,7 @@ import (
 	"math"
 	"sync"
 	"fmt"
+	"autohelm/pid"
 
 	"github.com/stianeikeland/go-rpio/v4"
 	
@@ -47,12 +48,12 @@ type HelmCtrl struct {
 	heading float64
 	enabled bool
 	overRange bool
-	Compass_gain float64
-	Helm_gain float64
-	Compass_ki float64
-	Compass_kd float64
-	Helm_ki float64
-	Helm_kd float64
+	compassGain float64
+	helmGain float64
+	compassKi float64
+	compassKd float64
+	helmKi float64
+	helmKd float64
 }
 
 func Beep(style string){
@@ -183,6 +184,38 @@ func (c *HelmCtrl) SetDesiredRudder(rudder float64){
 }
 
 
+func (c *HelmCtrl) SetPidByKeyCode(keyCode string, value float64) string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	changed := ""
+	switch keyCode{
+		case "0/": {
+			c.compassGain = value 
+			changed = "compassGain"
+		}
+		case "0.":{
+			c.compassKd = value
+			changed = "compassKd"
+		}
+		case "0*":{
+			c.compassKi = value
+			changed = "compassKi"
+		}
+		case "1/":{
+			c.helmGain = value
+			changed = "helmGain"
+		}
+		case "1*":{
+			c.helmKi = value
+			changed = "helmKi"
+		}
+		case "1.":{
+			c.helmKd = value
+			changed = "helmKd"
+		}
+	}
+	return changed
+}
 
 
 func (c *HelmCtrl) Helm(power float64){
@@ -239,11 +272,11 @@ func (c *HelmCtrl) GetMonitorString(strType uint32) string {
 	if strType == 1 {
 		rep = fmt.Sprintf("Monitor; power: %d, set_rudder: %.0f, rudder: %.0f, set_heading: %.1f, heading: %.1f, Enabled: %t, OverRange: %t, compass_gain: %.1f, helm_gain: %.1f", 
 					c.power, c.setRudder, c.rudder, c.setHeading, c.heading, c.enabled, c.overRange,
-					c.Compass_gain, c.Helm_gain)
+					c.compassGain, c.helmGain)
 	} else {
 		rep = fmt.Sprintf("Monitor; duty_power: %d, rudder: %.0f, heading: %.1f, compass_gain: %.1f, helm_gain: %.1f, compass_ki: %.1f, compass_kd: %.1f, helm_ki: %.1f, helm_kd: %.1f", 
-		c.dutyPower, c.rudder, c.heading, c.Compass_gain, c.Helm_gain, c.Compass_ki,
-		c.Compass_kd, c.Helm_ki, c.Helm_kd)
+		c.dutyPower, c.rudder, c.heading, c.compassGain, c.helmGain, c.compassKi,
+		c.compassKd, c.helmKi, c.helmKd)
 	}
 	return rep
 }
@@ -260,6 +293,38 @@ func (c *HelmCtrl) onPreLocked(power uint32){
 	c.dutyPower = p
 	c.power_pin.DutyCycle(c.dutyPower, PWM_CYCLE_LEN) 
 } 
+
+func (c *HelmCtrl) SetPidCompass(pid  *pid.Pid){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	pid.Scale_gain = c.compassGain
+	pid.Scale_kd = c.compassKd
+	pid.Scale_ki = c.compassKi
+}
+
+func (c *HelmCtrl) SetCompassPid(pid  *pid.Pid){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.compassGain = pid.Scale_gain
+	c.compassKd = pid.Scale_kd
+	c.compassKi = pid.Scale_ki
+}
+
+func (c *HelmCtrl) SetPidHelm(pid  *pid.Pid){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	pid.Scale_gain = c.helmGain
+	pid.Scale_kd = c.helmKd
+	pid.Scale_ki = c.helmKi
+}
+
+func (c *HelmCtrl) SetHelmPid(pid  *pid.Pid){
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.helmGain = pid.Scale_gain
+	c.helmKd = pid.Scale_kd
+	c.helmKi = pid.Scale_ki
+}
 
 func beeperTask(){
 	for{

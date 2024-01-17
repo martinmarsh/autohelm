@@ -26,7 +26,7 @@ var Motor *io.HelmCtrl
 var Monitor_channel chan string
 var Udp_monitor_active bool
 
-func Monitor(str string, print bool, udp bool){
+func Monitor(str string, print bool, udp bool) {
 	if udp && Udp_monitor_active {
 		Monitor_channel <- str
 	}
@@ -39,9 +39,9 @@ func Execute(config *ConfigData) {
 	// wait for everything to connect on boot up
 	controller_name := ""
 	Udp_monitor_active = false
-	
+
 	time.Sleep(5 * time.Second)
-	
+
 	channels := make(map[string](chan string))
 	fmt.Println("Parsing Config. in Execute function")
 
@@ -129,42 +129,26 @@ func Execute(config *ConfigData) {
 	}
 }
 
-func adjust_ks(str string){
+func adjust_ks(str string) {
 	Monitor(fmt.Sprintf("Controller; adjust pid  command %s", str), true, true)
 	end_byte := len(str)
 	if end_byte > 3 {
-		p, e := strconv.ParseFloat(str[2:end_byte-1], 64)
+		value, e := strconv.ParseFloat(str[2:end_byte-1], 64)
 
 		if str[end_byte-1] == '\n' && e == nil {
-			switch str[:2]{
-			case "0/":
-				Motor.Compass_gain = p
-				Monitor(fmt.Sprintf("Controller; compass gain: %.2f", Motor.Compass_gain), true, true)
-			case "0.":
-				Motor.Compass_kd = p
-				Monitor(fmt.Sprintf("Controller; compass kd: %.2f", Motor.Compass_kd), true, true)
-			case "0*":
-				Motor.Compass_ki = p
-				Monitor(fmt.Sprintf("Controller; compass ki: %.2f", Motor.Compass_ki), true, true)
-			case "1/":
-				Motor.Helm_gain = p
-				Monitor(fmt.Sprintf("Controller; helm gain: %.2f", Motor.Helm_gain), true, true)
-			case "1*":
-				Motor.Helm_ki = p
-				Monitor(fmt.Sprintf("Controller; helm ki: %.2f", Motor.Helm_ki), true, true)
-			case "1.":
-				Motor.Helm_kd = p
-				Monitor(fmt.Sprintf("Controller; helm kd: %.2f",Motor.Helm_kd), true, true)
+			changedValue := Motor.SetPidByKeyCode(str[:2], value)
+			if changedValue != "" {
+				Monitor(fmt.Sprintf("Controller; Pid set: %s: %.2f", changedValue, value), true, true)
+			} else {
+				Monitor("Error; Controller; Unknow key entry to set PID ", true, true)
 			}
-		}else{
-			Monitor(fmt.Sprintf("Error; Controller; adjusting PID values error: %s", e.Error()), true, true)
 		}
-	}else {
+	} else {
 		Monitor(fmt.Sprintf("Error; Controller; adjusting PID wrong length command must be >3 got: %d", end_byte), true, true)
-	}	
+	}
 }
 
-func adjust_heading(str string, dir float64){
+func adjust_heading(str string, dir float64) {
 	endByte := len(str)
 	p, e := strconv.ParseFloat(str[1:endByte-1], 64)
 	if str[endByte-1] == '\n' && e == nil {
@@ -177,15 +161,14 @@ func adjust_heading(str string, dir float64){
 
 }
 
-
 func process_commands(str string) {
 	Monitor(fmt.Sprintf("Controller; Process command: %s", str), true, true)
 	end_byte := len(str)
-	if str[0:1] == "7" && end_byte > 2{
+	if str[0:1] == "7" && end_byte > 2 {
 		p, e := strconv.ParseFloat(str[1:end_byte-1], 64)
-		if str[end_byte-1] == '\n' && e == nil && p<= 360 && p>= 0 {
+		if str[end_byte-1] == '\n' && e == nil && p <= 360 && p >= 0 {
 			newHeading := Motor.SetDesiredHeading(p)
-			Monitor(fmt.Sprintf("Controller; motor: on, - set_course: %.1f\n",newHeading), true, true)
+			Monitor(fmt.Sprintf("Controller; motor: on, - set_course: %.1f\n", newHeading), true, true)
 			Motor.Enable(true)
 			io.Beep("1s")
 		}
